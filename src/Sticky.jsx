@@ -42,6 +42,7 @@ class Sticky extends Component {
         this.frozen = false;
         this.skipNextScrollEvent = false;
         this.scrollTop = -1;
+        this.scrollLeft = -1;
 
         this.bottomBoundaryTarget;
         this.topTarget;
@@ -108,7 +109,8 @@ class Sticky extends Component {
     reset () {
         this.setState({
             status: STATUS_ORIGINAL,
-            pos: 0
+            pos: 0,
+            xPos: 0
         });
     }
 
@@ -119,10 +121,11 @@ class Sticky extends Component {
         });
     }
 
-    fix (pos) {
+    fix (pos, xPos = 0) {
         this.setState({
             status: STATUS_FIXED,
-            pos: pos
+            pos: pos,
+            xPos: xPos
         });
     }
 
@@ -131,13 +134,13 @@ class Sticky extends Component {
      * @param {Object} options optional top and bottomBoundary new values
      */
     updateInitialDimension (options) {
-        options = options || {}
+        options = options || {};
 
         var outerRect = this.outerElement.getBoundingClientRect();
         var innerRect = this.innerElement.getBoundingClientRect();
 
         var width = outerRect.width || outerRect.right - outerRect.left;
-        var height = innerRect.height || innerRect.bottom - innerRect.top;;
+        var height = innerRect.height || innerRect.bottom - innerRect.top;
         var outerY = outerRect.top + this.scrollTop;
 
         this.setState({
@@ -169,12 +172,14 @@ class Sticky extends Component {
             return;
         }
 
-        if (this.scrollTop === ae.scroll.top) {
+        var scrollLeft = e.target.scrollingElement.scrollLeft;
+        if (this.scrollTop === ae.scroll.top && this.scrollLeft === scrollLeft) {
             // Scroll position hasn't changed,
             // do nothing
             this.skipNextScrollEvent = true;
         } else {
             this.scrollTop = ae.scroll.top;
+            this.scrollLeft = scrollLeft;
             this.updateInitialDimension();
         }
     }
@@ -188,6 +193,7 @@ class Sticky extends Component {
 
         scrollDelta = ae.scroll.delta;
         this.scrollTop = ae.scroll.top;
+        this.scrollLeft = e.target.scrollingElement.scrollLeft;
         this.update();
     }
 
@@ -238,9 +244,9 @@ class Sticky extends Component {
                         // viewport bottom when scrolling down, or its top sticks to viewport top when scrolling up.
                         this.stickyBottom = this.stickyTop + this.state.height;
                         if (delta > 0 && bottom > this.stickyBottom) {
-                            this.fix(this.state.bottom - this.state.height);
+                            this.fix(this.state.bottom - this.state.height, this.scrollLeft);
                         } else if (delta < 0 && top < this.stickyTop) {
-                            this.fix(this.state.top);
+                            this.fix(this.state.top, this.scrollLeft);
                         }
                         break;
                     case STATUS_FIXED:
@@ -267,6 +273,7 @@ class Sticky extends Component {
                         } else {
                             toRelease = false;
                         }
+                        this.fix(this.state.pos, this.scrollLeft);
 
                         if (toRelease) {
                             this.release(this.stickyTop);
@@ -276,7 +283,7 @@ class Sticky extends Component {
             } else {
                 // In this case, Sticky is shorter then viewport minus top offset
                 // and will always fix to the top offset of viewport
-                this.fix(this.state.top);
+                this.fix(this.state.top, this.scrollLeft);
             }
         }
         this.delta = delta;
@@ -346,12 +353,15 @@ class Sticky extends Component {
         ];
     }
 
-    translate (style, pos) {
-        var enableTransforms = canEnableTransforms && this.props.enableTransforms
+    translate (style, pos, xPos = 0) {
+        var enableTransforms = canEnableTransforms && this.props.enableTransforms;
         if (enableTransforms && this.state.activated) {
-            style[TRANSFORM_PROP] = 'translate3d(0,' + Math.round(pos) + 'px,0)';
+            style[TRANSFORM_PROP] = 'translate3d(' + Math.round(~xPos) + 'px,' + Math.round(pos) + 'px,0)';
         } else {
             style.top = pos + 'px';
+            if (xPos) {
+                style.left = ~xPos + 'px'
+            }
         }
     }
 
@@ -369,7 +379,7 @@ class Sticky extends Component {
         var outerStyle = {};
 
         // always use translate3d to enhance the performance
-        this.translate(innerStyle, this.state.pos);
+        this.translate(innerStyle, this.state.pos, this.state.xPos);
         if (this.state.status !== STATUS_ORIGINAL) {
             innerStyle.width = this.state.width + 'px';
             outerStyle.height = this.state.height + 'px';
