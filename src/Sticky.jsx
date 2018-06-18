@@ -42,7 +42,7 @@ class Sticky extends Component {
         this.frozen = false;
         this.skipNextScrollEvent = false;
         this.scrollTop = -1;
-        this.scrollLeft = -1;
+        this.scrollLeft = 0;
 
         this.bottomBoundaryTarget;
         this.topTarget;
@@ -59,6 +59,7 @@ class Sticky extends Component {
             bottomBoundary: Infinity, // The bottom boundary on document
             status: STATUS_ORIGINAL, // The Sticky status
             pos: 0, // Real y-axis offset for rendering position-fixed and position-relative
+            xPos: 0,
             activated: false // once browser info is available after mounted, it becomes true to avoid checksum error
         };
     }
@@ -356,11 +357,11 @@ class Sticky extends Component {
     translate (style, pos, xPos = 0) {
         var enableTransforms = canEnableTransforms && this.props.enableTransforms;
         if (enableTransforms && this.state.activated) {
-            style[TRANSFORM_PROP] = 'translate3d(' + Math.round(~xPos) + 'px,' + Math.round(pos) + 'px,0)';
+            style[TRANSFORM_PROP] = 'translate3d(' + Math.round(-xPos) + 'px,' + Math.round(pos) + 'px,0)';
         } else {
             style.top = pos + 'px';
             if (xPos) {
-                style.left = ~xPos + 'px'
+                style.left = -xPos + 'px'
             }
         }
     }
